@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>All-in-One Downloader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons/css/flag-icons.min.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #8b5cf6;
+            --dark: #1e293b;
+            --light: #f8fafc;
+        }
+        
+        * {
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        
+        .ios-effect {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        .ios-effect:active {
+            transform: scale(0.97);
+        }
+        
+        .slide-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .slide-menu.active {
+            transform: translateX(0);
+        }
+        
+        .menu-backdrop {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .menu-backdrop.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+        
+        .shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% auto;
+            animation: shimmer 2s infinite linear;
+        }
+        
+        .ios-toggle {
+            width: 60px;
+            height: 32px;
+            background: #e5e7eb;
+            border-radius: 16px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .ios-toggle.active {
+            background: var(--primary);
+        }
+        
+        .ios-toggle::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 28px;
+            height: 28px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .ios-toggle.active::after {
+            transform: translateX(28px);
+        }
+        
+        .card-hover {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        @media (max-width: 640px) {
+            .zoom-safe {
+                min-height: 100vh;
+                overflow-x: hidden;
+            }
+            
+            input, button, select, textarea {
+                font-size: 16px !important;
+            }
+        }
+        
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .faq-item.active .faq-answer {
+            max-height: 500px;
+        }
+        
+        .faq-item.active .faq-icon {
+            transform: rotate(45deg);
+        }
+        
+        .language-dropdown {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            width: 200px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 50;
+        }
+        
+        .language-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .language-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .language-item:hover {
+            background-color: #f8fafc;
+        }
+        
+        .language-item.active {
+            background-color: #e0e7ff;
+        }
+        
+        .dark .language-dropdown {
+            background: #1f2937;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .dark .language-item:hover {
+            background-color: #374151;
+        }
+        
+        .dark .language-item.active {
+            background-color: #4f46e5;
+        }
+        
+        [dir="rtl"] .language-dropdown {
+            right: auto;
+            left: 0;
+        }
+        
+        [dir="rtl"] .slide-menu {
+            transform: translateX(100%);
+        }
+        
+        [dir="rtl"] .slide-menu.active {
+            transform: translateX(0);
+        }
+        
+        .download-option {
+            transition: all 0.2s ease;
+        }
+        
+        .download-option:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .download-option:hover span {
+            color: white !important;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-slate-900 min-h-screen zoom-safe">
+    <!-- Language Selector -->
+    <div class="fixed top-4 right-4 z-50">
+        <div class="relative">
+            <button id="languageToggle" class="p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-lg ios-effect flex items-center gap-2">
+                <span id="currentFlag" class="fi fi-id fis"></span>
+                <span id="currentLanguage" class="font-medium text-gray-700 dark:text-gray-300">ID</span>
+                <i class="fas fa-chevron-down text-sm text-gray-500 dark:text-gray-400"></i>
+            </button>
+            
+            <div class="language-dropdown" id="languageDropdown">
+                <div class="language-item" data-lang="id" data-flag="id">
+                    <span class="fi fi-id fis mr-3"></span>
+                    <span>Indonesian</span>
+                </div>
+                <div class="language-item" data-lang="en" data-flag="us">
+                    <span class="fi fi-us fis mr-3"></span>
+                    <span>English</span>
+                </div>
+                <div class="language-item" data-lang="ar" data-flag="sa">
+                    <span class="fi fi-sa fis mr-3"></span>
+                    <span>العربية (Arabic)</span>
+                </div>
+                <div class="language-item" data-lang="vi" data-flag="vn">
+                    <span class="fi fi-vn fis mr-3"></span>
+                    <span>Tiếng Việt (Vietnamese)</span>
+                </div>
+                <div class="language-item" data-lang="zh" data-flag="cn">
+                    <span class="fi fi-cn fis mr-3"></span>
+                    <span>中文 (Chinese)</span>
+                </div>
+                <div class="language-item" data-lang="ja" data-flag="jp">
+                    <span class="fi fi-jp fis mr-3"></span>
+                    <span>日本語 (Japanese)</span>
+                </div>
+                <div class="language-item" data-lang="ru" data-flag="ru">
+                    <span class="fi fi-ru fis mr-3"></span>
+                    <span>Русский (Russian)</span>
+                </div>
+                <div class="language-item" data-lang="de" data-flag="de">
+                    <span class="fi fi-de fis mr-3"></span>
+                    <span>Deutsch (German)</span>
+                </div>
+                <div class="language-item" data-lang="th" data-flag="th">
+                    <span class="fi fi-th fis mr-3"></span>
+                    <span>ไทย (Thai)</span>
+                </div>
+                <div class="language-item" data-lang="lo" data-flag="la">
+                    <span class="fi fi-la fis mr-3"></span>
+                    <span>ລາວ (Lao)</span>
+                </div>
+                <div class="language-item" data-lang="my" data-flag="mm">
+                    <span class="fi fi-mm fis mr-3"></span>
+                    <span>မြန်မာ (Burmese)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Menu Button -->
+    <div class="fixed top-4 left-4 z-40 lg:hidden">
+        <button id="menuToggle" class="p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-lg ios-effect">
+            <i class="fas fa-bars text-xl text-gray-700 dark:text-gray-200"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar Menu -->
+    <div class="menu-backdrop fixed inset-0 bg-black bg-opacity-50 z-30" id="menuBackdrop"></div>
+    
+    <div class="slide-menu fixed left-0 top-0 h-full w-80 bg-white dark:bg-gray-900 shadow-2xl z-40 overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white" data-i18n="menu.title">
+                    <i class="fas fa-download mr-2 text-indigo-600 dark:text-indigo-400"></i>
+                    Menu
+                </h2>
+                <button id="closeMenu" class="p-2 ios-effect">
+                    <i class="fas fa-times text-xl text-gray-600 dark:text-gray-300"></i>
+                </button>
+            </div>
+            
+            <nav class="space-y-2">
+                <a href="#home" class="flex items-center p-4 rounded-xl hover:bg-indigo-50 dark:hover:bg-gray-800 ios-effect">
+                    <i class="fas fa-home mr-3 text-lg text-indigo-600 dark:text-indigo-400"></i>
+                    <span class="text-gray-700 dark:text-gray-300 font-medium" data-i18n="menu.home">Home</span>
+                </a>
+                
+                <a href="#features" class="flex items-center p-4 rounded-xl hover:bg-indigo-50 dark:hover:bg-gray-800 ios-effect">
+                    <i class="fas fa-star mr-3 text-lg text-yellow-500"></i>
+                    <span class="text-gray-700 dark:text-gray-300 font-medium" data-i18n="menu.features">Keunggulan</span>
+                </a>
+                
+                <a href="#how-to-use" class="flex items-center p-4 rounded-xl hover:bg-indigo-50 dark:hover:bg-gray-800 ios-effect">
+                    <i class="fas fa-play-circle mr-3 text-lg text-green-500"></i>
+                    <span class="text-gray-700 dark:text-gray-300 font-medium" data-i18n="menu.howtouse">Cara Penggunaan</span>
+                </a>
+                
+                <a href="#faq" class="flex items-center p-4 rounded-xl hover:bg-indigo-50 dark:hover:bg-gray-800 ios-effect">
+                    <i class="fas fa-question-circle mr-3 text-lg text-blue-500"></i>
+                    <span class="text-gray-700 dark:text-gray-300 font-medium" data-i18n="menu.faq">FAQ</span>
+                </a>
+                
+                <a href="#download" class="flex items-center p-4 rounded-xl hover:bg-indigo-50 dark:hover:bg-gray-800 ios-effect">
+                    <i class="fas fa-download mr-3 text-lg text-purple-500"></i>
+                    <span class="text-gray-700 dark:text-gray-300 font-medium" data-i18n="menu.download">Download</span>
+                </a>
+            </nav>
+            
+            <div class="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-gray-700 dark:text-gray-300 font-medium" data-i18n="menu.darkmode">Mode Gelap</span>
+                    <div class="ios-toggle" id="darkModeToggle"></div>
+                </div>
+                
+                <div class="mt-4">
+                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2" data-i18n="menu.supported">Platform Support</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full text-sm">
+                            <i class="fab fa-youtube mr-1"></i> YouTube
+                        </span>
+                        <span class="px-3 py-1 bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-200 rounded-full text-sm">
+                            <i class="fab fa-instagram mr-1"></i> Instagram
+                        </span>
+                        <span class="px-3 py-1 bg-black dark:bg-gray-700 text-white rounded-full text-sm">
+                            <i class="fab fa-tiktok mr-1"></i> TikTok
+                        </span>
+                        <span class="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm">
+                            <i class="fab fa-spotify mr-1"></i> Spotify
+                        </span>
+                        <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">
+                            <i class="fab fa-twitter mr-1"></i> Twitter/X
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="min-h-screen p-4 md:p-6 lg:p-8" id="home">
+        <div class="max-w-6xl mx-auto">
+            <!-- Header -->
+            <header class="text-center mb-8 md:mb-12 pt-12 lg:pt-4">
+                <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    <i class="fas fa-download mr-3"></i>
+                    <span data-i18n="header.title">All-in-One Downloader</span>
+                </h1>
+                <p class="text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto" data-i18n="header.subtitle">
+                    Download video, audio, dan konten dari 50+ platform dengan kualitas terbaik
+                </p>
+            </header>
+
+            <!-- Download Section -->
+            <div class="mb-12" id="download">
+                <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 md:p-8 border-2 border-indigo-200 dark:border-indigo-800">
+                    <div class="flex items-center mb-6">
+                        <div class="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-xl mr-4">
+                            <i class="fas fa-download text-2xl text-indigo-600 dark:text-indigo-400"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white" data-i18n="download.title">Download Sekarang</h2>
+                            <p class="text-gray-600 dark:text-gray-400" data-i18n="download.subtitle">Tempel URL dan mulai download dengan kualitas terbaik</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <div class="relative">
+                            <div class="absolute left-4 top-1/2 transform -translate-y-1/2">
+                                <i class="fas fa-globe text-gray-400 dark:text-gray-500 text-xl"></i>
+                            </div>
+                            <input 
+                                type="text" 
+                                id="urlInput"
+                                placeholder="https://www.youtube.com/watch?v=..." 
+                                class="w-full pl-14 pr-4 py-4 text-lg rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800"
+                                data-i18n-placeholder="download.placeholder"
+                            >
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button id="downloadBtn" class="flex-1 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 ios-effect text-lg flex items-center justify-center gap-3">
+                            <i class="fas fa-search"></i>
+                            <span data-i18n="download.button">Analisis & Download</span>
+                        </button>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <p class="text-gray-600 dark:text-gray-400 text-center mb-4" data-i18n="download.supported">Platform yang didukung:</p>
+                        <div class="flex flex-wrap justify-center gap-3">
+                            <div class="flex items-center px-4 py-2 bg-red-50 dark:bg-red-900/30 rounded-full">
+                                <i class="fab fa-youtube text-red-600 dark:text-red-400 mr-2"></i>
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">YouTube</span>
+                            </div>
+                            <div class="flex items-center px-4 py-2 bg-pink-50 dark:bg-pink-900/30 rounded-full">
+                                <i class="fab fa-instagram text-pink-600 dark:text-pink-400 mr-2"></i>
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Instagram</span>
+                            </div>
+                            <div class="flex items-center px-4 py-2 bg-black dark:bg-gray-800 rounded-full">
+                                <i class="fab fa-tiktok text-white mr-2"></i>
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">TikTok</span>
+                            </div>
+                            <div class="flex items-center px-4 py-2 bg-green-50 dark:bg-green-900/30 rounded-full">
+                                <i class="fab fa-spotify text-green-600 dark:text-green-400 mr-2"></i>
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Spotify</span>
+                            </div>
+                            <div class="flex items-center px-4 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-full">
+                                <i class="fab fa-twitter text-blue-500 dark:text-blue-400 mr-2"></i>
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Twitter/X</span>
+                            </div>
+                            <div class="flex items-center px-4 py-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                                <i class="fab fa-facebook text-blue-600 dark:text-blue-400 mr-2"></i>
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Facebook</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading" class="hidden">
+                <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center">
+                    <div class="inline-block relative mb-6">
+                        <div class="w-20 h-20 border-4 border-indigo-200 dark:border-indigo-800 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin"></div>
+                        <i class="fas fa-download text-2xl text-indigo-600 dark:text-indigo-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 dark:text-white mb-2" data-i18n="loading.title">Menganalisis Link...</h3>
+                    <p class="text-gray-600 dark:text-gray-400" data-i18n="loading.subtitle">Sedang memproses URL Anda</p>
+                    <div class="mt-6 w-48 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mx-auto">
+                        <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 animate-pulse shimmer"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div id="results" class="hidden"></div>
+
+            <!-- Features Section -->
+            <div class="mb-12" id="features">
+                <h2 class="text-3xl font-bold text-center text-gray-800 dark:text-white mb-8">
+                    <i class="fas fa-star text-yellow-500 mr-3"></i>
+                    <span data-i18n="features.title">Keunggulan Kami</span>
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg card-hover">
+                        <div class="w-14 h-14 bg-indigo-100 dark:bg-indigo-900 rounded-xl flex items-center justify-center mb-4">
+                            <i class="fas fa-bolt text-2xl text-indigo-600 dark:text-indigo-400"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3" data-i18n="features.1.title">Cepat & Efisien</h3>
+                        <p class="text-gray-600 dark:text-gray-400" data-i18n="features.1.desc">Proses download yang cepat tanpa perlu menunggu lama.</p>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg card-hover">
+                        <div class="w-14 h-14 bg-green-100 dark:bg-green-900 rounded-xl flex items-center justify-center mb-4">
+                            <i class="fas fa-shield-alt text-2xl text-green-600 dark:text-green-400"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3" data-i18n="features.2.title">Aman & Privasi</h3>
+                        <p class="text-gray-600 dark:text-gray-400" data-i18n="features.2.desc">Kami tidak menyimpan data atau file Anda.</p>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg card-hover">
+                        <div class="w-14 h-14 bg-purple-100 dark:bg-purple-900 rounded-xl flex items-center justify-center mb-4">
+                            <i class="fas fa-mobile-alt text-2xl text-purple-600 dark:text-purple-400"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3" data-i18n="features.3.title">Responsif</h3>
+                        <p class="text-gray-600 dark:text-gray-400" data-i18n="features.3.desc">Berfungsi optimal di semua perangkat dan browser.</p>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg card-hover">
+                        <div class="w-14 h-14 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center mb-4">
+                            <i class="fas fa-language text-2xl text-blue-600 dark:text-blue-400"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3" data-i18n="features.4.title">Multi-Language</h3>
+                        <p class="text-gray-600 dark:text-gray-400" data-i18n="features.4.desc">Mendukung 7 bahasa berbeda untuk pengguna global.</p>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg card-hover">
+                        <div class="w-14 h-14 bg-yellow-100 dark:bg-yellow-900 rounded-xl flex items-center justify-center mb-4">
+                            <i class="fas fa-download text-2xl text-yellow-600 dark:text-yellow-400"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3" data-i18n="features.5.title">Gratis Selamanya</h3>
+                        <p class="text-gray-600 dark:text-gray-400" data-i18n="features.5.desc">Tidak ada biaya, tidak perlu registrasi.</p>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg card-hover">
+                        <div class="w-14 h-14 bg-red-100 dark:bg-red-900 rounded-xl flex items-center justify-center mb-4">
+                            <i class="fas fa-hd text-2xl text-red-600 dark:text-red-400"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3" data-i18n="features.6.title">Kualitas HD</h3>
+                        <p class="text-gray-600 dark:text-gray-400" data-i18n="features.6.desc">Download dengan kualitas tertinggi hingga 4K.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- How to Use -->
+            <div class="mb-12" id="how-to-use">
+                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl p-8 text-white">
+                    <h2 class="text-3xl font-bold mb-2 flex items-center">
+                        <i class="fas fa-play-circle mr-3"></i>
+                        <span data-i18n="howto.title">Cara Penggunaan</span>
+                    </h2>
+                    <p class="text-indigo-100 mb-8" data-i18n="howto.subtitle">4 langkah mudah untuk download</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+                            <div class="w-12 h-12 bg-white text-indigo-600 rounded-xl flex items-center justify-center mb-4 font-bold text-xl">1</div>
+                            <h3 class="text-xl font-bold mb-3" data-i18n="howto.step1.title">Salin URL</h3>
+                            <p class="text-indigo-100" data-i18n="howto.step1.desc">Salin link video/audio dari platform yang didukung</p>
+                        </div>
+                        
+                        <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+                            <div class="w-12 h-12 bg-white text-indigo-600 rounded-xl flex items-center justify-center mb-4 font-bold text-xl">2</div>
+                            <h3 class="text-xl font-bold mb-3" data-i18n="howto.step2.title">Tempel URL</h3>
+                            <p class="text-indigo-100" data-i18n="howto.step2.desc">Tempel link di kolom input di atas</p>
+                        </div>
+                        
+                        <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+                            <div class="w-12 h-12 bg-white text-indigo-600 rounded-xl flex items-center justify-center mb-4 font-bold text-xl">3</div>
+                            <h3 class="text-xl font-bold mb-3" data-i18n="howto.step3.title">Analisis</h3>
+                            <p class="text-indigo-100" data-i18n="howto.step3.desc">Klik tombol "Analisis" untuk memproses link</p>
+                        </div>
+                        
+                        <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+                            <div class="w-12 h-12 bg-white text-indigo-600 rounded-xl flex items-center justify-center mb-4 font-bold text-xl">4</div>
+                            <h3 class="text-xl font-bold mb-3" data-i18n="howto.step4.title">Download</h3>
+                            <p class="text-indigo-100" data-i18n="howto.step4.desc">Pilih kualitas dan format, lalu download</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Section -->
+            <div class="mb-12" id="faq">
+                <h2 class="text-3xl font-bold text-center text-gray-800 dark:text-white mb-8">
+                    <i class="fas fa-question-circle text-blue-500 mr-3"></i>
+                    <span data-i18n="faq.title">FAQ - Pertanyaan Umum</span>
+                </h2>
+                
+                <div class="max-w-3xl mx-auto space-y-4">
+                    <div class="faq-item bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
+                        <button class="faq-question w-full p-6 text-left flex justify-between items-center ios-effect">
+                            <span class="text-lg font-semibold text-gray-800 dark:text-white" data-i18n="faq.q1">Apakah ini benar-benar gratis?</span>
+                            <i class="fas fa-plus text-gray-500 dark:text-gray-400 faq-icon transition-transform"></i>
+                        </button>
+                        <div class="faq-answer px-6 pb-6">
+                            <p class="text-gray-600 dark:text-gray-400" data-i18n="faq.a1">Ya, sepenuhnya gratis! Tidak ada biaya tersembunyi, tidak perlu registrasi, dan tidak ada batasan download.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
+                        <button class="faq-question w-full p-6 text-left flex justify-between items-center ios-effect">
+                            <span class="text-lg font-semibold text-gray-800 dark:text-white" data-i18n="faq.q2">Apakah aman untuk digunakan?</span>
+                            <i class="fas fa-plus text-gray-500 dark:text-gray-400 faq-icon transition-transform"></i>
+                        </button>
+                        <div class="faq-answer px-6 pb-6">
+                            <p class="text-gray-600 dark:text-gray-400" data-i18n="faq.a2">Sangat aman. Kami tidak menyimpan data pribadi Anda dan semua proses download dilakukan secara real-time melalui server aman.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
+                        <button class="faq-question w-full p-6 text-left flex justify-between items-center ios-effect">
+                            <span class="text-lg font-semibold text-gray-800 dark:text-white" data-i18n="faq.q3">Platform apa saja yang didukung?</span>
+                            <i class="fas fa-plus text-gray-500 dark:text-gray-400 faq-icon transition-transform"></i>
+                        </button>
+                        <div class="faq-answer px-6 pb-6">
+                            <p class="text-gray-600 dark:text-gray-400" data-i18n="faq.a3">Kami mendukung 50+ platform termasuk YouTube, Instagram, TikTok, Spotify, Twitter/X, Facebook, SoundCloud, Vimeo, dan banyak lagi.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
+                        <button class="faq-question w-full p-6 text-left flex justify-between items-center ios-effect">
+                            <span class="text-lg font-semibold text-gray-800 dark:text-white" data-i18n="faq.q4">Apakah bisa download dalam kualitas HD?</span>
+                            <i class="fas fa-plus text-gray-500 dark:text-gray-400 faq-icon transition-transform"></i>
+                        </button>
+                        <div class="faq-answer px-6 pb-6">
+                            <p class="text-gray-600 dark:text-gray-400" data-i18n="faq.a4">Ya! Kami menyediakan opsi download mulai dari 360p hingga 4K untuk video, dan MP3 128kbps hingga 320kbps untuk audio.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
+                        <button class="faq-question w-full p-6 text-left flex justify-between items-center ios-effect">
+                            <span class="text-lg font-semibold text-gray-800 dark:text-white" data-i18n="faq.q5">Bagaimana jika link tidak berfungsi?</span>
+                            <i class="fas fa-plus text-gray-500 dark:text-gray-400 faq-icon transition-transform"></i>
+                        </button>
+                        <div class="faq-answer px-6 pb-6">
+                            <p class="text-gray-600 dark:text-gray-400" data-i18n="faq.a5">Pastikan link yang Anda masukkan valid dan dari platform yang didukung. Jika masih bermasalah, coba refresh halaman atau gunakan link yang berbeda.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-8">
+        <div class="max-w-6xl mx-auto px-4 text-center">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+                <div class="mb-4 md:mb-0">
+                    <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2">
+                        <i class="fas fa-download mr-2 text-indigo-600 dark:text-indigo-400"></i>
+                        <span data-i18n="footer.title">All-in-One Downloader</span>
+                    </h3>
+                    <p class="text-gray-600 dark:text-gray-400" data-i18n="footer.subtitle">Solusi download terbaik untuk semua kebutuhan Anda</p>
+                </div>
+                
+                <div class="flex space-x-4">
+                    <a href="#" class="p-3 bg-gray-100 dark:bg-gray-800 rounded-xl ios-effect">
+                        <i class="fab fa-github text-gray-800 dark:text-white"></i>
+                    </a>
+                    <a href="#" class="p-3 bg-gray-100 dark:bg-gray-800 rounded-xl ios-effect">
+                        <i class="fas fa-globe text-indigo-600 dark:text-indigo-400"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <p class="text-gray-600 dark:text-gray-400 mb-2">
+                © 2024 All-in-One Downloader. <span data-i18n="footer.made">Dibuat dengan</span> <i class="fas fa-heart text-red-500 mx-1"></i> <span data-i18n="footer.community">untuk komunitas.</span>
+            </p>
+            <p class="text-sm text-gray-500 dark:text-gray-500" data-i18n="footer.disclaimer">
+                Disclaimer: Alat ini hanya untuk keperluan pribadi dan edukasi. Kami tidak bertanggung jawab atas penyalahgunaan.
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // ==================== LANGUAGE SYSTEM ====================
+        const translations = {
+            id: {
+                "header.title": "All-in-One Downloader",
+                "header.subtitle": "Download video, audio, dan konten dari 50+ platform dengan kualitas terbaik",
+                "menu.title": "Menu",
+                "menu.home": "Home",
+                "menu.features": "Keunggulan",
+                "menu.howtouse": "Cara Penggunaan",
+                "menu.faq": "FAQ",
+                "menu.download": "Download",
+                "menu.darkmode": "Mode Gelap",
+                "menu.supported": "Platform Support",
+                "download.title": "Download Sekarang",
+                "download.subtitle": "Tempel URL dan mulai download dengan kualitas terbaik",
+                "download.placeholder": "https://www.youtube.com/watch?v=...",
+                "download.button": "Analisis & Download",
+                "download.supported": "Platform yang didukung:",
+                "loading.title": "Menganalisis Link...",
+                "loading.subtitle": "Sedang memproses URL Anda",
+                "features.title": "Keunggulan Kami",
+                "features.1.title": "Cepat & Efisien",
+                "features.1.desc": "Proses download yang cepat tanpa perlu menunggu lama.",
+                "features.2.title": "Aman & Privasi",
+                "features.2.desc": "Kami tidak menyimpan data atau file Anda.",
+                "features.3.title": "Responsif",
+                "features.3.desc": "Berfungsi optimal di semua perangkat dan browser.",
+                "features.4.title": "Multi-Language",
+                "features.4.desc": "Mendukung 7 bahasa berbeda untuk pengguna global.",
+                "features.5.title": "Gratis Selamanya",
+                "features.5.desc": "Tidak ada biaya, tidak perlu registrasi.",
+                "features.6.title": "Kualitas HD",
+                "features.6.desc": "Download dengan kualitas tertinggi hingga 4K.",
+                "howto.title": "Cara Penggunaan",
+                "howto.subtitle": "4 langkah mudah untuk download",
+                "howto.step1.title": "Salin URL",
+                "howto.step1.desc": "Salin link video/audio dari platform yang didukung",
+                "howto.step2.title": "Tempel URL",
+                "howto.step2.desc": "Tempel link di kolom input di atas",
+                "howto.step3.title": "Analisis",
+                "howto.step3.desc": "Klik tombol 'Analisis' untuk memproses link",
+                "howto.step4.title": "Download",
+                "howto.step4.desc": "Pilih kualitas dan format, lalu download",
+                "faq.title": "FAQ - Pertanyaan Umum",
+                "faq.q1": "Apakah ini benar-benar gratis?",
+                "faq.a1": "Ya, sepenuhnya gratis! Tidak ada biaya tersembunyi, tidak perlu registrasi, dan tidak ada batasan download.",
+                "faq.q2": "Apakah aman untuk digunakan?",
+                "faq.a2": "Sangat aman. Kami tidak menyimpan data pribadi Anda dan semua proses download dilakukan secara real-time melalui server aman.",
+                "faq.q3": "Platform apa saja yang didukung?",
+                "faq.a3": "Kami mendukung 50+ platform termasuk YouTube, Instagram, TikTok, Spotify, Twitter/X, Facebook, SoundCloud, Vimeo, dan banyak lagi.",
+                "faq.q4": "Apakah bisa download dalam kualitas HD?",
+                "faq.a4": "Ya! Kami menyediakan opsi download mulai dari 360p hingga 4K untuk video, dan MP3 128kbps hingga 320kbps untuk audio.",
+                "faq.q5": "Bagaimana jika link tidak berfungsi?",
+                "faq.a5": "Pastikan link yang Anda masukkan valid dan dari platform yang didukung. Jika masih bermasalah, coba refresh halaman atau gunakan link yang berbeda.",
+                "footer.title": "All-in-One Downloader",
+                "footer.subtitle": "Solusi download terbaik untuk semua kebutuhan Anda",
+                "footer.made": "Dibuat dengan",
+                "footer.community": "untuk komunitas.",
+                "footer.disclaimer": "Disclaimer: Alat ini hanya untuk keperluan pribadi dan edukasi. Kami tidak bertanggung jawab atas penyalahgunaan."
+            },
+            en: {
+                "header.title": "All-in-One Downloader",
+                "header.subtitle": "Download video, audio, and content from 50+ platforms with the best quality",
+                "menu.title": "Menu",
+                "menu.home": "Home",
+                "menu.features": "Features",
+                "menu.howtouse": "How to Use",
+                "menu.faq": "FAQ",
+                "menu.download": "Download",
+                "menu.darkmode": "Dark Mode",
+                "menu.supported": "Platform Support",
+                "download.title": "Download Now",
+                "download.subtitle": "Paste URL and start downloading with best quality",
+                "download.placeholder": "https://www.youtube.com/watch?v=...",
+                "download.button": "Analyze & Download",
+                "download.supported": "Supported platforms:",
+                "loading.title": "Analyzing Link...",
+                "loading.subtitle": "Processing your URL",
+                "features.title": "Our Advantages",
+                "features.1.title": "Fast & Efficient",
+                "features.1.desc": "Fast download process without long waiting.",
+                "features.2.title": "Safe & Private",
+                "features.2.desc": "We don't store your data or files.",
+                "features.3.title": "Responsive",
+                "features.3.desc": "Works optimally on all devices and browsers.",
+                "features.4.title": "Multi-Language",
+                "features.4.desc": "Supports 7 different languages for global users.",
+                "features.5.title": "Free Forever",
+                "features.5.desc": "No costs, no registration required.",
+                "features.6.title": "HD Quality",
+                "features.6.desc": "Download with highest quality up to 4K.",
+                "howto.title": "How to Use",
+                "howto.subtitle": "4 easy steps to download",
+                "howto.step1.title": "Copy URL",
+                "howto.step1.desc": "Copy video/audio link from supported platform",
+                "howto.step2.title": "Paste URL",
+                "howto.step2.desc": "Paste link in the input field above",
+                "howto.step3.title": "Analyze",
+                "howto.step3.desc": "Click 'Analyze' button to process the link",
+                "howto.step4.title": "Download",
+                "howto.step4.desc": "Select quality and format, then download",
+                "faq.title": "FAQ - Frequently Asked Questions",
+                "faq.q1": "Is this really free?",
+                "faq.a1": "Yes, completely free! No hidden fees, no registration required, and no download limits.",
+                "faq.q2": "Is it safe to use?",
+                "faq.a2": "Very safe. We don't store your personal data and all download processes are done in real-time through secure servers.",
+                "faq.q3": "What platforms are supported?",
+                "faq.a3": "We support 50+ platforms including YouTube, Instagram, TikTok, Spotify, Twitter/X, Facebook, SoundCloud, Vimeo, and many more.",
+                "faq.q4": "Can I download in HD quality?",
+                "faq.a4": "Yes! We provide download options from 360p to 4K for video, and MP3 128kbps to 320kbps for audio.",
+                "faq.q5": "What if the link doesn't work?",
+                "faq.a5": "Make sure the link you entered is valid and from a supported platform. If problems persist, try refreshing the page or use a different link.",
+                "footer.title": "All-in-One Downloader",
+                "footer.subtitle": "The best download solution for all your needs",
+                "footer.made": "Made with",
+                "footer.community": "for the community.",
+                "footer.disclaimer": "Disclaimer: This tool is for personal and educational purposes only. We are not responsible for misuse."
+            },
+            ar: {
+                "header.title": "أداة التنزيل الشاملة",
+                "header.subtitle": "قم بتنزيل الفيديو والصوت والمحتوى من 50+ منصة بأفضل جودة",
+                "menu.title": "القائمة",
+                "menu.home": "الرئيسية",
+                "menu.features": "المميزات",
+                "menu.howtouse": "كيفية الاستخدام",
+                "menu.faq": "الأسئلة الشائعة",
+                "menu.download": "تنزيل",
+                "menu.darkmode": "الوضع الداكن",
+                "menu.supported": "المنصات المدعومة",
+                "download.title": "تنزيل الآن",
+                "download.subtitle": "الصق الرابط وابدأ التنزيل بأفضل جودة",
+                "download.placeholder": "https://www.youtube.com/watch?v=...",
+                "download.button": "تحليل وتنزيل",
+                "download.supported": "المنصات المدعومة:",
+                "loading.title": "جاري تحليل الرابط...",
+                "loading.subtitle": "جاري معالجة رابطك",
+                "features.title": "مميزاتنا",
+                "features.1.title": "سريع وفعال",
+                "features.1.desc": "عملية تنزيل سريعة دون انتظار طويل.",
+                "features.2.title": "آمن وخاص",
+                "features.2.desc": "نحن لا نخزن بياناتك أو ملفاتك.",
+                "features.3.title": "متجاوب",
+                "features.3.desc": "يعمل بشكل مثالي على جميع الأجهزة والمتصفحات.",
+                "features.4.title": "متعدد اللغات",
+                "features.4.desc": "يدعم 7 لغات مختلفة للمستخدمين العالميين.",
+                "features.5.title": "مجاني للأبد",
+                "features.5.desc": "لا توجد تكاليف، لا حاجة للتسجيل.",
+                "features.6.title": "جودة HD",
+                "features.6.desc": "تنزيل بأعلى جودة حتى 4K.",
+                "howto.title": "كيفية الاستخدام",
+                "howto.subtitle": "4 خطوات سهلة للتنزيل",
+                "howto.step1.title": "انسخ الرابط",
+                "howto.step1.desc": "انسخ رابط الفيديو/الصوت من المنصة المدعومة",
+                "howto.step2.title": "الصق الرابط",
+                "howto.step2.desc": "الصق الرابط في حقل الإدخال أعلاه",
+                "howto.step3.title": "تحليل",
+                "howto.step3.desc": "انقر على زر 'تحليل' لمعالجة الرابط",
+                "howto.step4.title": "تنزيل",
+                "howto.step4.desc": "اختر الجودة والتنسيق، ثم قم بالتنزيل",
+                "faq.title": "الأسئلة الشائعة",
+                "faq.q1": "هل هذا مجاني حقًا؟",
+                "faq.a1": "نعم، مجاني تمامًا! لا توجد رسوم خفية، ولا حاجة للتسجيل، ولا حدود للتنزيل.",
+                "faq.q2": "هل هو آمن للاستخدام؟",
+                "faq.a2": "آمن جدًا. نحن لا نخزن بياناتك الشخصية وجميع عمليات التنزيل تتم في الوقت الفعلي عبر خوادم آمنة.",
+                "faq.q3": "ما هي المنصات المدعومة؟",
+                "faq.a3": "نحن ندعم 50+ منصة بما في ذلك YouTube، Instagram، TikTok، Spotify، Twitter/X، Facebook، SoundCloud، Vimeo، والعديد غيرها.",
+                "faq.q4": "هل يمكنني التنزيل بجودة HD؟",
+                "faq.a4": "نعم! نقدم خيارات تنزيل من 360p إلى 4K للفيديو، و MP3 من 128kbps إلى 320kbps للصوت.",
+                "faq.q5": "ماذا لو لم يعمل الرابط؟",
+                "faq.a5": "تأكد من أن الرابط الذي أدخلته صالح ومن منصة مدعومة. إذا استمرت المشاكل، حاول تحديث الصفحة أو استخدام رابط مختلف.",
+                "footer.title": "أداة التنزيل الشاملة",
+                "footer.subtitle": "أفضل حل للتنزيل لجميع احتياجاتك",
+                "footer.made": "صنع بـ",
+                "footer.community": "للمجتمع.",
+                "footer.disclaimer": "إخلاء المسؤولية: هذه الأداة للأغراض الشخصية والتعليمية فقط. نحن غير مسؤولين عن سوء الاستخدام."
+            },
+            vi: {
+                "header.title": "Trình Tải Xuống Tất cả trong Một",
+                "header.subtitle": "Tải video, audio và nội dung từ 50+ nền tảng với chất lượng tốt nhất",
+                "menu.title": "Menu",
+                "menu.home": "Trang chủ",
+                "menu.features": "Tính năng",
+                "menu.howtouse": "Cách sử dụng",
+                "menu.faq": "FAQ",
+                "menu.download": "Tải xuống",
+                "menu.darkmode": "Chế độ tối",
+                "menu.supported": "Nền tảng hỗ trợ",
+                "download.title": "Tải xuống Ngay",
+                "download.subtitle": "Dán URL và bắt đầu tải xuống với chất lượng tốt nhất",
+                "download.placeholder": "https://www.youtube.com/watch?v=...",
+                "download.button": "Phân tích & Tải xuống",
+                "download.supported": "Nền tảng được hỗ trợ:",
+                "loading.title": "Đang phân tích liên kết...",
+                "loading.subtitle": "Đang xử lý URL của bạn",
+                "features.title": "Ưu điểm của chúng tôi",
+                "features.1.title": "Nhanh & Hiệu quả",
+                "features.1.desc": "Quá trình tải xuống nhanh không cần chờ đợi lâu.",
+                "features.2.title": "An toàn & Riêng tư",
+                "features.2.desc": "Chúng tôi không lưu trữ dữ liệu hoặc tệp của bạn.",
+                "features.3.title": "Phản hồi nhanh",
+                "features.3.desc": "Hoạt động tối ưu trên tất cả thiết bị và trình duyệt.",
+                "features.4.title": "Đa ngôn ngữ",
+                "features.4.desc": "Hỗ trợ 7 ngôn ngữ khác nhau cho người dùng toàn cầu.",
+                "features.5.title": "Miễn phí Mãi mãi",
+                "features.5.desc": "Không có chi phí, không cần đăng ký.",
+                "features.6.title": "Chất lượng HD",
+                "features.6.desc": "Tải xuống với chất lượng cao nhất lên đến 4K.",
+                "howto.title": "Cách sử dụng",
+                "howto.subtitle": "4 bước dễ dàng để tải xuống",
+                "howto.step1.title": "Sao chép URL",
+                "howto.step1.desc": "Sao chép liên kết video/audio từ nền tảng được hỗ trợ",
+                "howto.step2.title": "Dán URL",
+                "howto.step2.desc": "Dán liên kết vào trường nhập ở trên",
+                "howto.step3.title": "Phân tích",
+                "howto.step3.desc": "Nhấn nút 'Phân tích' để xử lý liên kết",
+                "howto.step4.title": "Tải xuống",
+                "howto.step4.desc": "Chọn chất lượng và định dạng, sau đó tải xuống",
+                "faq.title": "FAQ - Câu hỏi thường gặp",
+                "faq.q1": "Có thực sự miễn phí không?",
+                "faq.a1": "Vâng, hoàn toàn miễn phí! Không có phí ẩn, không cần đăng ký và không giới hạn tải xuống.",
+                "faq.q2": "Có an toàn để sử dụng không?",
+                "faq.a2": "Rất an toàn. Chúng tôi không lưu trữ dữ liệu cá nhân của bạn và tất cả quá trình tải xuống được thực hiện theo thời gian thực thông qua máy chủ an toàn.",
+                "faq.q3": "Những nền tảng nào được hỗ trợ?",
+                "faq.a3": "Chúng tôi hỗ trợ 50+ nền tảng bao gồm YouTube, Instagram, TikTok, Spotify, Twitter/X, Facebook, SoundCloud, Vimeo, và nhiều hơn nữa.",
+                "faq.q4": "Có thể tải xuống ở chất lượng HD không?",
+                "faq.a4": "Có! Chúng tôi cung cấp tùy chọn tải xuống từ 360p đến 4K cho video và MP3 128kbps đến 320kbps cho âm thanh.",
+                "faq.q5": "Nếu liên kết không hoạt động thì sao?",
+                "faq.a5": "Đảm bảo liên kết bạn nhập hợp lệ và từ nền tảng được hỗ trợ. Nếu vấn đề vẫn còn, hãy thử làm mới trang hoặc sử dụng liên kết khác.",
+                "footer.title": "Trình Tải Xuống Tất cả trong Một",
+                "footer.subtitle": "Giải pháp tải xuống tốt nhất cho mọi nhu cầu của bạn",
+                "footer.made": "Được tạo với",
+                "footer.community": "cho cộng đồng.",
+                "footer.disclaimer": "Tuyên bố miễn trừ trách nhiệm: Công cụ này chỉ dành cho mục đích cá nhân và giáo dục. Chúng tôi không chịu trách nhiệm cho việc sử dụng sai mục đích."
+            },
+            zh: {
+                "header.title": "全能下载器",
+                "header.subtitle": "从50多个平台下载视频、音频和内容，质量最佳",
+                "menu.title": "菜单",
+                "menu.home": "首页",
+                "menu.features": "特点",
+                "menu.howtouse": "使用说明",
+                "menu.faq": "常见问题",
+                "menu.download": "下载",
+                "menu.darkmode": "深色模式",
+                "menu.supported": "支持平台",
+                "download.title": "立即下载",
+                "download.subtitle": "粘贴URL并以最佳质量开始下载",
+                "download.placeholder": "https://www.youtube.com/watch?v=...",
+                "download.button": "分析并下载",
+                "download.supported": "支持的平台：",
+                "loading.title": "正在分析链接...",
+                "loading.subtitle": "正在处理您的URL",
+                "features.title": "我们的优势",
+                "features.1.title": "快速高效",
+                "features.1.desc": "下载过程快速，无需长时间等待。",
+                "features.2.title": "安全私密",
+                "features.2.desc": "我们不存储您的数据或文件。",
+                "features.3.title": "响应式",
+                "features.3.desc": "在所有设备和浏览器上都能最佳运行。",
+                "features.4.title": "多语言",
+                "features.4.desc": "支持7种不同语言，面向全球用户。",
+                "features.5.title": "永久免费",
+                "features.5.desc": "无费用，无需注册。",
+                "features.6.title": "高清质量",
+                "features.6.desc": "以最高质量下载，最高可达4K。",
+                "howto.title": "使用说明",
+                "howto.subtitle": "4个简单步骤即可下载",
+                "howto.step1.title": "复制URL",
+                "howto.step1.desc": "从支持的平台复制视频/音频链接",
+                "howto.step2.title": "粘贴URL",
+                "howto.step2.desc": "将链接粘贴到上面的输入框中",
+                "howto.step3.title": "分析",
+                "howto.step3.desc": "点击'分析'按钮处理链接",
+                "howto.step4.title": "下载",
+                "howto.step4.desc": "选择质量和格式，然后下载",
+                "faq.title": "常见问题解答",
+                "faq.q1": "这真的免费吗？",
+                "faq.a1": "是的，完全免费！没有隐藏费用，无需注册，没有下载限制。",
+                "faq.q2": "使用安全吗？",
+                "faq.a2": "非常安全。我们不存储您的个人数据，所有下载过程都通过安全服务器实时完成。",
+                "faq.q3": "支持哪些平台？",
+                "faq.a3": "我们支持50多个平台，包括YouTube、Instagram、TikTok、Spotify、Twitter/X、Facebook、SoundCloud、Vimeo等。",
+                "faq.q4": "可以下载高清质量吗？",
+                "faq.a4": "可以！我们提供从360p到4K的视频下载选项，以及MP3 128kbps到320kbps的音频下载选项。",
+                "faq.q5": "如果链接无效怎么办？",
+                "faq.a5": "确保您输入的链接有效且来自支持的平台。如果问题仍然存在，请尝试刷新页面或使用不同的链接。",
+                "footer.title": "全能下载器",
+                "footer.subtitle": "满足您所有需求的最佳下载解决方案",
+                "footer.made": "用爱制作",
+                "footer.community": "为社区服务。",
+                "footer.disclaimer": "免责声明：此工具仅用于个人和教育目的。我们对滥用行为不承担责任。"
+            },
+            ja: {
+                "header.title": "オールインワンダウンローダー",
+                "header.subtitle": "50以上のプラットフォームから最高品質で動画、音声、コンテンツをダウンロード",
+                "menu.title": "メニュー",
+                "menu.home": "ホーム",
+                "menu.features": "特徴",
+                "menu.howtouse": "使い方",
+                "menu.faq": "よくある質問",
+                "menu.download": "ダウンロード",
+                "menu.darkmode": "ダークモード",
+                "menu.supported": "サポートプラットフォーム",
+                "download.title": "今すぐダウンロード",
+                "download.subtitle": "URLを貼り付けて最高品質でダウンロード開始",
+                "download.placeholder": "https://www.youtube.com/watch?v=...",
+                "download.button": "分析＆ダウンロード",
+                "download.supported": "サポートプラットフォーム：",
+                "loading.title": "リンクを分析中...",
+                "loading.subtitle": "URLを処理中",
+                "features.title": "私たちの強み",
+                "features.1.title": "高速かつ効率的",
+                "features.1.desc": "長い待ち時間なしで高速なダウンロード処理。",
+                "features.2.title": "安全かつプライベート",
+                "features.2.desc": "データやファイルを保存しません。",
+                "features.3.title": "レスポンシブ",
+                "features.3.desc": "すべてのデバイスとブラウザで最適に動作。",
+                "features.4.title": "多言語対応",
+                "features.4.desc": "グローバルユーザーのために7つの異なる言語をサポート。",
+                "features.5.title": "永久無料",
+                "features.5.desc": "費用なし、登録不要。",
+                "features.6.title": "HD品質",
+                "features.6.desc": "最高4Kまでの最高品質でダウンロード。",
+                "howto.title": "使い方",
+                "howto.subtitle": "ダウンロードまでの4つの簡単な手順",
+                "howto.step1.title": "URLをコピー",
+                "howto.step1.desc": "サポートされているプラットフォームから動画/音声リンクをコピー",
+                "howto.step2.title": "URLを貼り付け",
+                "howto.step2.desc": "上記の入力フィールドにリンクを貼り付け",
+                "howto.step3.title": "分析",
+                "howto.step3.desc": "'分析'ボタンをクリックしてリンクを処理",
+                "howto.step4.title": "ダウンロード",
+                "howto.step4.desc": "品質と形式を選択し、ダウンロード",
+                "faq.title": "よくある質問",
+                "faq.q1": "本当に無料ですか？",
+                "faq.a1": "はい、完全に無料です！隠れた費用、登録は不要で、ダウンロード制限もありません。",
+                "faq.q2": "安全に使用できますか？",
+                "faq.a2": "非常に安全です。個人データを保存せず、すべてのダウンロード処理は安全なサーバーでリアルタイムに行われます。",
+                "faq.q3": "どのプラットフォームがサポートされていますか？",
+                "faq.a3": "YouTube、Instagram、TikTok、Spotify、Twitter/X、Facebook、SoundCloud、Vimeoなど50以上のプラットフォームをサポートしています。",
+                "faq.q4": "HD品質でダウンロードできますか？",
+                "faq.a4": "はい！動画には360pから4Kまで、音声にはMP3 128kbpsから320kbpsまでのダウンロードオプションを提供しています。",
+                "faq.q5": "リンクが機能しない場合はどうすればよいですか？",
+                "faq.a5": "入力したリンクが有効で、サポートされているプラットフォームからのものであることを確認してください。問題が解決しない場合は、ページを更新するか別のリンクを使用してください。",
+                "footer.title": "オールインワンダウンローダー",
+                "footer.subtitle": "あらゆるニーズに最適なダウンロードソリューション",
+                "footer.made": "で作成",
+                "footer.community": "コミュニティのために。",
+                "footer.disclaimer": "免責事項：このツールは個人および教育目的のみです。不正使用については責任を負いません。"
+            },
+            ru: {
+                "header.title": "Универсальный загрузчик",
+                "header.subtitle": "Скачивайте видео, аудио и контент с 50+ платформ с лучшим качеством",
+                "menu.title": "Меню",
+                "menu.home": "Главная",
+                "menu.features": "Преимущества",
+                "menu.howtouse": "Как использовать",
+                "menu.faq": "Частые вопросы",
+                "menu.download": "Загрузка",
+                "menu.darkmode": "Темный режим",
+                "menu.supported": "Поддерживаемые платформы",
+                "download.title": "Скачать сейчас",
+                "download.subtitle": "Вставьте URL и начните скачивание с лучшим качеством",
+                "download.placeholder": "https://www.youtube.com/watch?v=...",
+                "download.button": "Анализировать и скачать",
+                "download.supported": "Поддерживаемые платформы:",
+                "loading.title": "Анализ ссылки...",
+                "loading.subtitle": "Обработка вашего URL",
+                "features.title": "Наши преимущества",
+                "features.1.title": "Быстро и эффективно",
+                "features.1.desc": "Быстрый процесс загрузки без долгого ожидания.",
+                "features.2.title": "Безопасно и приватно",
+                "features.2.desc": "Мы не храним ваши данные или файлы.",
+                "features.3.title": "Адаптивный",
+                "features.3.desc": "Оптимально работает на всех устройствах и браузерах.",
+                "features.4.title": "Многоязычный",
+                "features.4.desc": "Поддержка 7 различных языков для глобальных пользователей.",
+                "features.5.title": "Бесплатно навсегда",
+                "features.5.desc": "Никаких затрат, регистрация не требуется.",
+                "features.6.title": "Качество HD",
+                "features.6.desc": "Скачивание с наивысшим качеством до 4K.",
+                "howto.title": "Как использовать",
+                "howto.subtitle": "4 простых шага для загрузки",
+                "howto.step1.title": "Скопируйте URL",
+                "howto.step1.desc": "Скопируйте ссылку на видео/аудио с поддерживаемой платформы",
+                "howto.step2.title": "Вставьте URL",
+                "howto.step2.desc": "Вставьте ссылку в поле ввода выше",
+                "howto.step3.title": "Анализ",
+                "howto.step3.desc": "Нажмите кнопку 'Анализ' для обработки ссылки",
+                "howto.step4.title": "Загрузка",
+                "howto.step4.desc": "Выберите качество и формат, затем скачайте",
+                "faq.title": "Часто задаваемые вопросы",
+                "faq.q1": "Это действительно бесплатно?",
+                "faq.a1": "Да, абсолютно бесплатно! Никаких скрытых платежей, регистрация не требуется, нет ограничений на загрузку.",
+                "faq.q2": "Безопасно ли использовать?",
+                "faq.a2": "Очень безопасно. Мы не храним ваши персональные данные, и все процессы загрузки выполняются в реальном времени через защищенные серверы.",
+                "faq.q3": "Какие платформы поддерживаются?",
+                "faq.a3": "Мы поддерживаем 50+ платформ, включая YouTube, Instagram, TikTok, Spotify, Twitter/X, Facebook, SoundCloud, Vimeo и многие другие.",
+                "faq.q4": "Можно ли скачивать в HD качестве?",
+                "faq.a4": "Да! Мы предоставляем варианты загрузки от 360p до 4K для видео и MP3 от 128kbps до 320kbps для аудио.",
+                "faq.q5": "Что делать, если ссылка не работает?",
+                "faq.a5": "Убедитесь, что введенная вами ссылка действительна и с поддерживаемой платформы. Если проблемы сохраняются, попробуйте обновить страницу или использовать другую ссылку.",
+                "footer.title": "Универсальный загрузчик",
+                "footer.subtitle": "Лучшее решение для загрузки для всех ваших нужд",
+                "footer.made": "Сделано с",
+                "footer.community": "для сообщества.",
+                "footer.disclaimer": "Отказ от ответственности: Этот инструмент предназначен только для личного и образовательного использования. Мы не несем ответственности за неправомерное использование."
+            },
+            de: {
+                "header.title": "All-in-One Downloader",
+                "header.subtitle": "Laden Sie Videos, Audio und Inhalte von 50+ Plattformen in bester Qualität herunter",
+                "menu.title": "Menü",
+                "menu.home": "Startseite",
+                "menu.features": "Funktionen",
+                "menu.howtouse": "So geht's",
+                "menu.faq": "FAQ",
+                "menu.download": "Download",
+                "menu.darkmode": "Dunkelmodus",
+                "menu.supported": "Unterstützte Plattformen",
+                "download.title": "Jetzt herunterladen",
+                "download.subtitle": "Fügen Sie die URL ein und starten Sie den Download in bester Qualität",
+                "download.placeholder": "https://www.youtube.com/watch?v=...",
+                "download.button": "Analysieren & Herunterladen",
+                "download.supported": "Unterstützte Plattformen:",
+                "loading.title": "Link wird analysiert...",
+                "loading.subtitle": "Ihre URL wird verarbeitet",
+                "features.title": "Unsere Vorteile",
+                "features.1.title": "Schnell & Effizient",
+                "features.1.desc": "Schneller Downloadprozess ohne langes Warten.",
+                "features.2.title": "Sicher & Privat",
+                "features.2.desc": "Wir speichern Ihre Daten oder Dateien nicht.",
+                "features.3.title": "Responsive",
+                "features.3.desc": "Funktioniert optimal auf allen Geräten und Browsern.",
+                "features.4.title": "Mehrsprachig",
+                "features.4.desc": "Unterstützt 7 verschiedene Sprachen für globale Nutzer.",
+                "features.5.title": "Für immer kostenlos",
+                "features.5.desc": "Keine Kosten, keine Registrierung erforderlich.",
+                "features.6.title": "HD-Qualität",
+                "features.6.desc": "Laden Sie mit höchster Qualität bis zu 4K herunter.",
+                "howto.title": "So geht's",
+                "howto.subtitle": "4 einfache Schritte zum Download",
+                "howto.step1.title": "URL kopieren",
+                "howto.step1.desc": "Kopieren Sie den Video/Audio-Link von der unterstützten Plattform",
+                "howto.step2.title": "URL einfügen",
+                "howto.step2.desc": "Fügen Sie den Link in das Eingabefeld oben ein",
+                "howto.step3.title": "Analysieren",
+                "howto.step3.desc": "Klicken Sie auf 'Analysieren', um den Link zu verarbeiten",
+                "howto.step4.title": "Herunterladen",
+                "howto.step4.desc": "Wählen Sie Qualität und Format, dann herunterladen",
+                "faq.title": "FAQ - Häufig gestellte Fragen",
+                "faq.q1": "Ist das wirklich kostenlos?",
+                "faq.a1": "Ja, völlig kostenlos! Keine versteckten Gebühren, keine Registrierung erforderlich und keine Download-Beschränkungen.",
+                "faq.q2": "Ist es sicher zu verwenden?",
+                "faq.a2": "Sehr sicher. Wir speichern Ihre persönlichen Daten nicht und alle Download-Prozesse erfolgen in Echtzeit über sichere Server.",
+                "faq.q3": "Welche Plattformen werden unterstützt?",
+                "faq.a3": "Wir unterstützen 50+ Plattformen, darunter YouTube, Instagram, TikTok, Spotify, Twitter/X, Facebook, SoundCloud, Vimeo und viele mehr.",
+                "faq.q4": "Kann ich in HD-Qualität herunterladen?",
+                "faq.a4": "Ja! Wir bieten Download-Optionen von 360p bis 4K für Video und MP3 128kbps bis 320kbps für Audio.",
+                "faq.q5": "Was ist, wenn der Link nicht funktioniert?",
+                "faq.a5": "Stellen Sie sicher, dass der von Ihnen eingegebene Link gültig ist und von einer unterstützten Plattform stammt. Falls Probleme weiterhin bestehen, versuchen Sie, die Seite zu aktualisieren oder einen anderen Link zu verwenden.",
+                "footer.title": "All-in-One Downloader",
+                "footer.subtitle": "Die beste Download-Lösung für alle Ihre Anforderungen",
+                "footer.made": "Erstellt mit",
+                "footer.community": "für die Community.",
+                "footer.disclaimer": "Haftungsausschluss: Dieses Tool dient nur persönlichen und Bildungszwecken. Wir sind nicht verantwortlich für Missbrauch."
+            },
+            th: {
+                "header.title": "ดาวน์โหลดแบบออลอินวัน",
+                "header.subtitle": "ดาวน์โหลดวิดีโอ เสียง และเนื้อหาจากแพลตฟอร์ม 50+ แห่งด้วยคุณภาพที่ดีที่สุด",
+                "menu.title": "เมนู",
+                "menu.home": "หน้าหลัก",
+                "menu.features": "คุณสมบัติ",
+                "menu.howtouse": "วิธีใช้",
+                "menu.faq": "คำถามที่พบบ่อย",
+                "menu.download": "ดาวน์โหลด",
+                "menu.darkmode": "โหมดมืด",
+                "menu.supported": "แพลตฟอร์มที่รองรับ",
+                "download.title": "ดาวน์โหลดทันที",
+                "download.subtitle": "วาง URL และเริ่มดาวน์โหลดด้วยคุณภาพที่ดีที่สุด",
+                "download.placeholder": "https://www.youtube.com/watch?v=...",
+                "download.button": "วิเคราะห์ & ดาวน์โหลด",
+                "download.supported": "แพลตฟอร์มที่รองรับ:",
+                "loading.title": "กำลังวิเคราะห์ลิงก์...",
+                "loading.subtitle": "กำลังประมวลผล URL ของคุณ",
+                "features.title": "ข้อดีของเรา",
+                "features.1.title": "รวดเร็ว & มีประสิทธิภาพ",
+                "features.1.desc": "กระบวนการดาวน์โหลดที่รวดเร็วโดยไม่ต้องรอนาน",
+                "features.2.title": "ปลอดภัย & เป็นส่วนตัว",
+                "features.2.desc": "เราไม่เก็บข้อมูลหรือไฟล์ของคุณ",
+                "features.3.title": "ตอบสนองดี",
+                "features.3.desc": "ทำงานได้ดีที่สุดบนอุปกรณ์และเบราว์เซอร์ทั้งหมด",
+                "features.4.title": "หลายภาษา",
+                "features.4.desc": "รองรับ 7 ภาษาต่างๆ สำหรับผู้ใช้ทั่วโลก",
+                "features.5.title": "ฟรีตลอดไป",
+                "features.5.desc": "ไม่มีค่าใช้จ่าย ไม่จำเป็นต้องลงทะเบียน",
+                "features.6.title": "คุณภาพ HD",
+                "features.6.desc": "ดาวน์โหลดด้วยคุณภาพสูงสุดถึง 4K",
+                "howto.title": "วิธีใช้",
+                "howto.subtitle": "4 ขั้นตอนง่ายๆ ในการดาวน์โหลด",
+                "howto.step1.title": "คัดลอก URL",
+                "howto.step1.desc": "คัดลอกลิงก์วิดีโอ/เสียงจากแพลตฟอร์มที่รองรับ",
+                "howto.step2.title": "วาง URL",
+                "howto.step2.desc": "วางลิงก์ในช่องป้อนข้อมูลด้านบน",
+                "howto.step3.title": "วิเคราะห์",
+                "howto.step3.desc": "คลิกปุ่ม 'วิเคราะห์' เพื่อประมวลผลลิงก์",
+                "howto.step4.title": "ดาวน์โหลด",
+                "howto.step4.desc": "เลือกคุณภาพและรูปแบบ แล้วดาวน์โหลด",
+                "faq.title": "FAQ - คำถามที่พบบ่อย",
+                "faq.q1": "ฟรีจริงๆ หรือไม่?",
+                "faq.a1": "ใช่ ฟรีทั้งหมด! ไม่มีค่าใช้จ่ายแอบแฝง ไม่จำเป็นต้องลงทะเบียน และไม่มีขีดจำกัดการดาวน์โหลด",
+                "faq.q2": "ปลอดภัยที่จะใช้หรือไม่?",
+                "faq.a2": "ปลอดภัยมาก เราไม่เก็บข้อมูลส่วนตัวของคุณ และกระบวนการดาวน์โหลดทั้งหมดดำเนินการแบบเรียลไทม์ผ่านเซิร์ฟเวอร์ที่ปลอดภัย",
+                "faq.q3": "แพลตฟอร์มใดบ้างที่รองรับ?",
+                "faq.a3": "เรารองรับ 50+ แพลตฟอร์ม รวมถึง YouTube, Instagram, TikTok, Spotify, Twitter/X, Facebook, SoundCloud, Vimeo และอื่นๆ อีกมากมาย",
+                "faq.q4": "สามารถดาวน์โหลดในคุณภาพ HD ได้หรือไม่?",
+                "faq.a4": "ได้! เรามีตัวเลือกดาวน์โหลดตั้งแต่ 360p ถึง 4K สำหรับวิดีโอ และ MP3 128kbps ถึง 320kbps สำหรับเสียง",
+                "faq.q5": "ถ้าลิงก์ไม่ทำงานจะทำอย่างไร?",
+                "faq.a5": "ตรวจสอบให้แน่ใจว่าลิงก์ที่คุณป้อนนั้นถูกต้องและมาจากแพลตฟอร์มที่รองรับ หากยังมีปัญหา ลองรีเฟรชหน้าหรือใช้ลิงก์อื่น",
+                "footer.title": "ดาวน์โหลดแบบออลอินวัน",
+                "footer.subtitle": "โซลูชันการดาวน์โหลดที่ดีที่สุดสำหรับทุกความต้องการของคุณ",
+                "footer.made": "สร้างด้วย",
+                "footer.community": "สำหรับชุมชน",
+                "footer.disclaimer": "ข้อจำกัดความรับผิดชอบ: เครื่องมือนี้ใช้สำหรับวัตถุประสงค์ส่วนตัวและการศึกษาเท่านั้น เราไม่รับผิดชอบต่อการใช้ในทางที่ผิด"
+            },
+            lo: {
+                "header.title": "ດາວໂຫລດທັງໝົດໃນດຽວ",
+                "header.subtitle": "ດາວໂຫລດວິດີໂອ, ສຽງ, ແລະເນື້ອຫາຈາກ 50+ ແພລດຟອມມດ້ວຍຄຸນນະພາບທີ່ດີທີ່ສຸດ",
+                "menu.title": "ເມນູ",
+                "menu.home": "ໜ້າຫຼັກ",
+                "menu.features": "ຄຸນສົມບັດ",
+                "menu.howtouse": "ວິທີໃຊ້",
+                "menu.faq": "ຄຳຖາມທີ່ພົບເລື້ອຍ",
+                "menu.download": "ດາວໂຫລດ",
+                "menu.darkmode": "ໂຫມດມືດ",
+                "menu.supported": "ແພລດຟອມທີ່ຮອງຮັບ",
+                "download.title": "ດາວໂຫລດດຽວນີ້",
+                "download.subtitle": "ວາງ URL ແລະເລີ່ມດາວໂຫລດດ້ວຍຄຸນນະພາບທີ່ດີທີ່ສຸດ",
+                "download.placeholder": "https://www.youtube.com/watch?v=...",
+                "download.button": "ວິເຄາະ & ດາວໂຫລດ",
+                "download.supported": "ແພລດຟອມທີ່ຮອງຮັບ:",
+                "loading.title": "ກຳລັງວິເຄາະລິ້ງ...",
+                "loading.subtitle": "ກຳລັງປະມວນຜົນ URL ຂອງທ່ານ",
+                "features.title": "ຂໍ້ໄດ້ປຽບຂອງພວກເຮົາ",
+                "features.1.title": "ໄວ & ມີປະສິດທິພາບ",
+                "features.1.desc": "ຂະບວນການດາວໂຫລດທີ່ໄວບໍ່ຕ້ອງລໍຖ້າດົນ",
+                "features.2.title": "ປອດໄພ & ສ່ວນຕົວ",
+                "features.2.desc": "ພວກເຮົາບໍ່ໄດ້ເກັບຂໍ້ມູນຫຼືໄຟລ໌ຂອງທ່ານ",
+                "features.3.title": "ຕອບສະໜອງດີ",
+                "features.3.desc": "ເຮັດວຽກໄດ້ດີທີ່ສຸດໃນອຸປະກອນແລະເບຣາວເຊີທັງໝົດ",
+                "features.4.title": "ຫຼາຍພາສາ",
+                "features.4.desc": "ຮອງຮັບ 7 ພາສາຕ່າງກັນສຳລັບຜູ້ໃຊ້ທົ່ວໂລກ",
+                "features.5.title": "ຟຣີຕະຫຼອດໄປ",
+                "features.5.desc": "ບໍ່ມີຄ່າໃຊ້ຈ່າຍ, ບໍ່ຕ້ອງລົງທະບຽນ",
+                "features.6.title": "ຄຸນນະພາບ HD",
+                "features.6.desc": "ດາວໂຫລດດ້ວຍຄຸນນະພາບສູງສຸດສູງເຖິງ 4K",
+                "howto.title": "ວິທີໃຊ້",
+                "howto.subtitle": "4 ຂັ້ນຕອນງ່າຍໆ ໃນການດາວໂຫລດ",
+                "howto.step1.title": "ຄັດລອກ URL",
+                "howto.step1.desc": "ຄັດລອກລິ້ງວິດີໂອ/ສຽງຈາກແພລດຟອມທີ່ຮອງຮັບ",
+                "howto.step2.title": "ວາງ URL",
+                "howto.step2.desc": "ວາງລິ້ງໃນຊ່ອງປ້ອນຂໍ້ມູນຂ້າງເທິງ",
+                "howto.step3.title": "ວິເຄາະ",
+                "howto.step3.desc": "ກົດປຸ່ມ 'ວິເຄາະ' ເພື່ອປະມວນຜົນລິ້ງ",
+                "howto.step4.title": "ດາວໂຫລດ",
+                "howto.step4.desc": "ເລືອກຄຸນນະພາບແລະຮູບແບບ, ແລ້ວດາວໂຫລດ",
+                "faq.title": "ຄຳຖາມທີ່ພົບເລື້ອຍ",
+                "faq.q1": "ຟຣີແທ້ໆ ບໍ?",
+                "faq.a1": "ແມ່ນ, ຟຣີທັງໝົດ! ບໍ່ມີຄ່າໃຊ້ຈ່າຍເຊື່ອງຊ້ອນ, ບໍ່ຕ້ອງລົງທະບຽນ, ແລະບໍ່ມີຂອບເຂດການດາວໂຫລດ",
+                "faq.q2": "ປອດໄພທີ່ຈະໃຊ້ບໍ?",
+                "faq.a2": "ປອດໄພຫຼາຍ. ພວກເຮົາບໍ່ເກັບຂໍ້ມູນສ່ວນຕົວຂອງທ່ານແລະຂະບວນການດາວໂຫລດທັງໝົດແມ່ນດຳເນີນການແບບເວລາຈິງຜ່ານເຊີບເວີທີ່ປອດໄພ",
+                "faq.q3": "ແພລດຟອມໃດແດ່ທີ່ຮອງຮັບ?",
+                "faq.a3": "ພວກເຮົາຮອງຮັບ 50+ ແພລດຟອມ ລວມທັງ YouTube, Instagram, TikTok, Spotify, Twitter/X, Facebook, SoundCloud, Vimeo, ແລະອື່ນໆ ອີກຫຼາຍ",
+                "faq.q4": "ສາມາດດາວໂຫລດໃນຄຸນນະພາບ HD ໄດ້ບໍ?",
+                "faq.a4": "ໄດ້! ພວກເຮົາມີຕົວເລືອກການດາວໂຫລດຕັ້ງແຕ່ 360p ຫາ 4K ສຳລັບວິດີໂອ, ແລະ MP3 128kbps ຫາ 320kbps ສຳລັບສຽງ",
+                "faq.q5": "ຖ້າລິ້ງບໍ່ເຮັດວຽກຈະເຮັດແນວໃດ?",
+                "faq.a5": "ໃຫ້ແນ່ໃຈວ່າລິ້ງທີ່ທ່ານໃສ່ນັ້ນຖືກຕ້ອງແລະມາຈາກແພລດຟອມທີ່ຮອງຮັບ. ຖ້າຍັງມີບັນຫາຢູ່, ລອງຟຣິຊໜ້າຫຼືໃຊ້ລິ້ງອື່ນ",
+                "footer.title": "ດາວໂຫລດທັງໝົດໃນດຽວ",
+                "footer.subtitle": "ວິທີແກ້ໄຂການດາວໂຫລດທີ່ດີທີ່ສຸດສຳລັບທຸກຄວາມຕ້ອງການຂອງທ່ານ",
+                "footer.made": "ສ້າງດ້ວຍ",
+                "footer.community": "ເພື່ອຊຸມຊົນ",
+                "footer.disclaimer": "ຂໍ້ຍົກເວັ້ນຄວາມຮັບຜິດຊອບ: ເຄື່ອງມືນີ້ແມ່ນສຳລັບຈຸດປະສົງສ່ວນຕົວແລະການສຶກສາເທົ່ານັ້ນ. ພວກເຮົາບໍ່ຮັບຜິດຊອບຕໍ່ການນຳໃຊ້ໃນທາງທີ່ຜິດ."
+            },
+            my: {
+                "header.title": "All-in-One ဒေါင်းလုဒ်",
+                "header.subtitle": "ဗီဒီယို၊ အသံနှင့် အကြောင်းအရာများကို ပလက်ဖောင်း ၅၀ ကျော်မှ အရည်အသွေးအကောင်းဆုံးဖြင့် ဒေါင်းလုဒ်လုပ်ပါ",
+                "menu.title": "မီနူး",
+                "menu.home": "ပင်မစာမျက်နှာ",
+                "menu.features": "အင်္ဂါရပ်များ",
+                "menu.howtouse": "အသုံးပြုနည်း",
+                "menu.faq": "အမေးများသောမေးခွန်းများ",
+                "menu.download": "ဒေါင်းလုဒ်",
+                "menu.darkmode": "အမှောင်မုဒ်",
+                "menu.supported": "ပံ့ပိုးထားသော ပလက်ဖောင်းများ",
+                "download.title": "ယခုဒေါင်းလုဒ်လုပ်ပါ",
+                "download.subtitle": "URL ကိုကပ်ပြီး အရည်အသွေးအကောင်းဆုံးဖြင့် ဒေါင်းလုဒ်စတင်ပါ",
+                "download.placeholder": "https://www.youtube.com/watch?v=...",
+                "download.button": "ခွဲခြမ်းစိတ်ဖြာ & ဒေါင်းလုဒ်",
+                "download.supported": "ပံ့ပိုးထားသော ပလက်ဖောင်းများ:",
+                "loading.title": "လင့်ခ်ကို ခွဲခြမ်းစိတ်ဖြာနေသည်...",
+                "loading.subtitle": "သင့်၏ URL ကို ပြုပြင်နေသည်",
+                "features.title": "ကျွန်ုပ်တို့၏ အကျိုးကျေးဇူးများ",
+                "features.1.title": "မြန်ဆန် & ထိရောက်မှုရှိခြင်း",
+                "features.1.desc": "ဒေါင်းလုဒ်လုပ်သည့်လုပ်ငန်းစဉ်သည် အချိန်ကြာမြင့်စွာ စောင့်စရာမလိုဘဲ မြန်ဆန်သည်။",
+                "features.2.title": "လုံခြုံ & သီးသန့်ဖြစ်ခြင်း",
+                "features.2.desc": "ကျွန်ုပ်တို့သည် သင့်ဒေတာ သို့မဟုတ် ဖိုင်များကို သိမ်းဆည်းမထားပါ။",
+                "features.3.title": "တုံ့ပြန်နိုင်မှု",
+                "features.3.desc": "ကိရိယာနှင့် ဘရောက်ဇာအားလုံးတွင် အသုံးပြုနိုင်သည်။",
+                "features.4.title": "ဘာသာစကားမျိုးစုံ",
+                "features.4.desc": "ကမ္ဘာလုံးဆိုင်ရာအသုံးပြုသူများအတွက် ဘာသာစကား ၇ မျိုးကို ပံ့ပိုးပေးသည်။",
+                "features.5.title": "အမြဲတမ်းအခမဲ့",
+                "features.5.desc": "ကုန်ကျစရိတ်မရှိ၊ မှတ်ပုံတင်ရန် မလိုအပ်ပါ။",
+                "features.6.title": "HD အရည်အသွေး",
+                "features.6.desc": "အရည်အသွေးအမြင့်ဆုံး 4K အထိ ဒေါင်းလုဒ်လုပ်ပါ။",
+                "howto.title": "အသုံးပြုနည်း",
+                "howto.subtitle": "ဒေါင်းလုဒ်လုပ်ရန် အလွယ်ကူဆုံးအဆင့် ၄ ဆင့်",
+                "howto.step1.title": "URL ကိုကူးယူပါ",
+                "howto.step1.desc": "ပံ့ပိုးထားသောပလက်ဖောင်းမှ ဗီဒီယို/အသံလင့်ခ်ကို ကူးယူပါ",
+                "howto.step2.title": "URL ကိုကပ်ပါ",
+                "howto.step2.desc": "အထက်ရှိ input field တွင် လင့်ခ်ကိုကပ်ပါ",
+                "howto.step3.title": "ခွဲခြမ်းစိတ်ဖြာပါ",
+                "howto.step3.desc": "လင့်ခ်ကိုပြုပြင်ရန် 'ခွဲခြမ်းစိတ်ဖြာ' ခလုတ်ကို နှိပ်ပါ",
+                "howto.step4.title": "ဒေါင်းလုဒ်လုပ်ပါ",
+                "howto.step4.desc": "အရည်အသွေးနှင့် ဖော်မတ်ကိုရွေးချယ်ပြီး ဒေါင်းလုဒ်လုပ်ပါ",
+                "faq.title": "အမေးများသောမေးခွန်းများ",
+                "faq.q1": "တကယ်အခမဲ့လား?",
+                "faq.a1": "ဟုတ်ပါတယ်၊ အပြည့်အဝအခမဲ့ပါ! ဝှက်ထားသောအခကြေးငွေမရှိ၊ မှတ်ပုံတင်ရန်မလိုအပ်ပါ၊ ဒေါင်းလုဒ်အကန့်အသတ်မရှိပါ။",
+                "faq.q2": "သုံးရန်စိတ်ချရပါသလား?",
+                "faq.a2": "အလွန်စိတ်ချရပါတယ်။ ကျွန်ုပ်တို့သည် သင့်ကိုယ်ရေးကိုယ်တာအချက်အလက်များကို သိမ်းဆည်းမထားပါ၊ ဒေါင်းလုဒ်လုပ်ငန်းစဉ်အားလုံးကို လုံခြုံသောဆာဗာများမှတစ်ဆင့် အချိန်နှင့်တပြေးညီလုပ်ဆောင်သည်။",
+                "faq.q3": "ဘယ်ပလက်ဖောင်းတွေကို ပံ့ပိုးပေးပါသလဲ?",
+                "faq.a3": "ကျွန်ုပ်တို့သည် YouTube၊ Instagram၊ TikTok၊ Spotify၊ Twitter/X၊ Facebook၊ SoundCloud၊ Vimeo အပါအဝင် ပလက်ဖောင်း ၅၀ ကျော်ကို ပံ့ပိုးပေးပါသည်။",
+                "faq.q4": "HD အရည်အသွေးဖြင့် ဒေါင်းလုဒ်လုပ်နိုင်ပါသလား?",
+                "faq.a4": "ဟုတ်ကဲ့! ဗီဒီယိုအတွက် 360p မှ 4K အထိ၊ အသံအတွက် MP3 128kbps မှ 320kbps အထိ ဒေါင်းလုဒ်ရွေးချယ်ခွင့်များကို ကျွန်ုပ်တို့ပေးပါသည်။",
+                "faq.q5": "လင့်ခ်အလုပ်မလုပ်ရင် ဘာလုပ်ရမလဲ?",
+                "faq.a5": "သင်ထည့်သွင်းလိုက်သော လင့်ခ်သည် တရားဝင်ပြီး ပံ့ပိုးထားသောပလက်ဖောင်းမှ ဖြစ်ကြောင်း သေချာပါစေ။ အကယ်၍ ပြဿနာများ ဆက်ရှိနေပါက စာမျက်နှာကို ပြန်လည်စတင်ကြည့်ရှုပါ သို့မဟုတ် အခြားလင့်ခ်ကို အသုံးပြုပါ။",
+                "footer.title": "All-in-One ဒေါင်းလုဒ်",
+                "footer.subtitle": "သင့်လိုအပ်ချက်အားလုံးအတွက် အကောင်းဆုံးဒေါင်းလုဒ်ဖြေရှင်းချက်",
+                "footer.made": "ပြုလုပ်ထားသည်",
+                "footer.community": "လူမှုအသိုင်းအဝိုင်းအတွက်",
+                "footer.disclaimer": "တာဝန်ခံကြေညာချက် - ဤကိရိယာကို ကိုယ်ရေးကိုယ်တာနှင့် ပညာရေးရည်ရွယ်ချက်များအတွက်သာ အသုံးပြုပါသည်။ အလွဲသုံးစားပြုမှုအတွက် ကျွန်ုပ်တို့ တာဝန်မယူပါ။"
+            }
+        };
+
+        // Language management
+        let currentLang = localStorage.getItem('language') || 'id';
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            
+            // Update flag and language code display
+            const flagElement = document.getElementById('currentFlag');
+            const langElement = document.getElementById('currentLanguage');
+            const selectedItem = document.querySelector(`[data-lang="${lang}"]`);
+            
+            flagElement.className = `fi fi-${selectedItem.dataset.flag} fis`;
+            langElement.textContent = lang.toUpperCase();
+            
+            // Update all elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (translations[lang] && translations[lang][key]) {
+                    element.textContent = translations[lang][key];
+                }
+            });
+            
+            // Update placeholder attributes
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+                const key = element.getAttribute('data-i18n-placeholder');
+                if (translations[lang] && translations[lang][key]) {
+                    element.placeholder = translations[lang][key];
+                }
+            });
+            
+            // Update active state in dropdown
+            document.querySelectorAll('.language-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            selectedItem.classList.add('active');
+            
+            // Apply RTL for Arabic
+            if (lang === 'ar') {
+                document.body.dir = 'rtl';
+            } else {
+                document.body.dir = 'ltr';
+            }
+            
+            // Close dropdown
+            closeLanguageDropdown();
+        }
+
+        function toggleLanguageDropdown() {
+            const dropdown = document.getElementById('languageDropdown');
+            dropdown.classList.toggle('active');
+        }
+
+        function closeLanguageDropdown() {
+            const dropdown = document.getElementById('languageDropdown');
+            dropdown.classList.remove('active');
+        }
+
+        // Initialize language
+        document.getElementById('languageToggle').addEventListener('click', toggleLanguageDropdown);
+        
+        document.querySelectorAll('.language-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const lang = item.dataset.lang;
+                setLanguage(lang);
+            });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#languageToggle') && !e.target.closest('#languageDropdown')) {
+                closeLanguageDropdown();
+            }
+        });
+
+        // ==================== DARK MODE ====================
+        const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const htmlElement = document.documentElement;
+
+        if (localStorage.getItem('theme') === 'dark' || 
+            (!localStorage.getItem('theme') && prefersDarkScheme.matches)) {
+            htmlElement.classList.add('dark');
+            darkModeToggle.classList.add('active');
+        }
+
+        darkModeToggle.addEventListener('click', () => {
+            darkModeToggle.classList.toggle('active');
+            if (htmlElement.classList.contains('dark')) {
+                htmlElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                htmlElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+
+        // ==================== MENU FUNCTIONALITY ====================
+        const menuToggle = document.getElementById('menuToggle');
+        const closeMenu = document.getElementById('closeMenu');
+        const menuBackdrop = document.getElementById('menuBackdrop');
+        const slideMenu = document.querySelector('.slide-menu');
+
+        function openMenu() {
+            slideMenu.classList.add('active');
+            menuBackdrop.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMenuFunc() {
+            slideMenu.classList.remove('active');
+            menuBackdrop.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        menuToggle.addEventListener('click', openMenu);
+        closeMenu.addEventListener('click', closeMenuFunc);
+        menuBackdrop.addEventListener('click', closeMenuFunc);
+
+        // Close menu when clicking on menu links
+        document.querySelectorAll('.slide-menu a').forEach(link => {
+            link.addEventListener('click', closeMenuFunc);
+        });
+
+        // ==================== FAQ FUNCTIONALITY ====================
+        document.querySelectorAll('.faq-question').forEach(question => {
+            question.addEventListener('click', () => {
+                const faqItem = question.parentElement;
+                faqItem.classList.toggle('active');
+            });
+        });
+
+        // ==================== DOWNLOAD FUNCTIONALITY ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlInput = document.getElementById('urlInput');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            
+            // Download Handler
+            downloadBtn.addEventListener('click', analyzeUrl);
+            
+            urlInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') analyzeUrl();
+            });
+
+            async function analyzeUrl() {
+                const url = urlInput.value.trim();
+                
+                if (!url) {
+                    showNotification('Please enter a URL', 'warning');
+                    urlInput.focus();
+                    return;
+                }
+                
+                if (!url.includes('http')) {
+                    showNotification('Invalid URL. Make sure it starts with http:// or https://', 'warning');
+                    return;
+                }
+                
+                // Show loading
+                loading.classList.remove('hidden');
+                results.classList.add('hidden');
+                results.innerHTML = '';
+                
+                try {
+                    // Make API call to our backend
+                    const response = await fetch('/api/download', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            url: url,
+                            language: currentLang 
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    loading.classList.add('hidden');
+                    
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    
+                    displayResults(data);
+                    
+                } catch (error) {
+                    loading.classList.add('hidden');
+                    
+                    // Show error notification
+                    showNotification('Failed to connect to download service. Please try again later.', 'error');
+                    
+                    // Clear results
+                    results.innerHTML = '';
+                    results.classList.add('hidden');
+                }
+            }
+            
+            function displayResults(data) {
+                results.classList.remove('hidden');
+                results.innerHTML = '';
+                
+                const resultContainer = document.createElement('div');
+                resultContainer.className = `bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 border-2 border-indigo-200 dark:border-indigo-800`;
+                
+                resultContainer.innerHTML = `
+                    <div class="flex items-center mb-6">
+                        <div class="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-xl mr-4">
+                            <i class="fas fa-download text-2xl text-indigo-600 dark:text-indigo-400"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Hasil Download</h2>
+                            <p class="text-gray-600 dark:text-gray-400">Pilih kualitas dan format yang diinginkan</p>
+                        </div>
+                    </div>
+                `;
+                
+                if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+                    const optionsDiv = document.createElement('div');
+                    optionsDiv.className = 'space-y-4';
+                    
+                    data.data.forEach((item, index) => {
+                        const option = document.createElement('div');
+                        option.className = 'flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-850 transition-colors';
+                        
+                        option.innerHTML = `
+                            <div>
+                                <div class="flex items-center mb-2">
+                                    <span class="px-3 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full text-sm font-medium mr-3">
+                                        ${item.ext ? item.ext.toUpperCase() : 'FILE'}
+                                    </span>
+                                    <span class="text-lg font-semibold text-gray-800 dark:text-white">
+                                        ${item.quality || 'High Quality'}
+                                    </span>
+                                </div>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm">
+                                    ${item.title || 'Download File'} • ${item.size || 'Unknown size'}
+                                </p>
+                            </div>
+                            <button onclick="downloadFile('${item.url || '#'}', '${item.title || 'download'}.${item.ext || 'mp4'}')" class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-md ios-effect flex items-center gap-2">
+                                <i class="fas fa-download"></i>
+                                Download
+                            </button>
+                        `;
+                        
+                        optionsDiv.appendChild(option);
+                    });
+                    
+                    resultContainer.appendChild(optionsDiv);
+                } else {
+                    resultContainer.innerHTML += `
+                        <div class="text-center py-8">
+                            <i class="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
+                            <h3 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">Tidak Dapat Memproses</h3>
+                            <p class="text-gray-600 dark:text-gray-400">URL tidak valid atau platform tidak didukung.</p>
+                        </div>
+                    `;
+                }
+                
+                results.appendChild(resultContainer);
+                
+                // Smooth scroll to results
+                results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+
+        // ==================== NOTIFICATION SYSTEM ====================
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-24 z-50 p-4 rounded-2xl shadow-lg transform transition-all duration-300 translate-y-0 opacity-100 ${
+                type === 'error' ? 'bg-red-500' : type === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+            } text-white`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'check-circle'} mr-3"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.transform = 'translateY(-20px)';
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // ==================== DOWNLOAD FILE FUNCTION ====================
+        window.downloadFile = function(url, filename) {
+            if (!url || url === '#') {
+                showNotification('Download link is not available', 'error');
+                return;
+            }
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            // Show success notification
+            showNotification('Download started!', 'success');
+        };
+
+        // ==================== SMOOTH SCROLL ====================
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // ==================== MOBILE ZOOM PREVENTION ====================
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        // ==================== INITIALIZE ON LOAD ====================
+        window.addEventListener('load', () => {
+            // Set initial language
+            setLanguage(currentLang);
+        });
+    </script>
+</body>
+</html>
